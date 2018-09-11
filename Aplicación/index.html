@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="style.css">
+    <script src="functions.js"></script>
+    <title>AuntentID</title>
+</head>
+<body>
+    <div id="home_container">
+        <div id="logo">
+
+        </div>
+        <div id="text_init">
+            <p class="texto">Bienvenido al sistema de autenticación facial de la Universidad de Montevideo</p>
+        </div>
+        <div id="btn_init">
+            <button id="init" onclick="move_to_info()">
+                Presione para comenzar
+            </button>
+        </div>
+    </div>
+    <div id="info_container">
+            <div id="text_info">
+                <p class="texto">Coloque su documento de identidad como indica la figura</p>
+            </div>
+            <div id="pic_info">
+    
+            </div>
+            <div id="btn_info">
+                <button id="prev" onclick="move_to_photo()">
+                    Anterior
+                </button>
+                <button id="next" onclick="move_to_photo()">
+                        Siguiente
+                </button>
+            </div>
+        </div>
+</body>
+</html>
