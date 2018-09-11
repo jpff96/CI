@@ -1,91 +1,98 @@
-# USAGE
-# python detect_mrz.py --images examples
-
-# import the necessary packages
+#!/usr/bin/python
+#Importamos los paquetes necesarios
 from imutils import paths
 import numpy as np
 import argparse
 import imutils
+import string
 import cv2
+from passporteye import read_mrz
+import pytesseract
+from PIL import Image
+import base64
 
-# construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--images", required=True, help="path to images directory")
 args = vars(ap.parse_args())
 
-# initialize a rectangular and square structuring kernel
+#Estos núcleos delimitarán los cuadrados de cada caracter y el rectángulo principal
 rectKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (13, 5))
 sqKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 21))
 
 # loop over the input image paths
 for imagePath in paths.list_images(args["images"]):
-	# load the image, resize it, and convert it to grayscale
+	#Cargamos las imágenes, le modificamos el tamaño y convertimos a escala de grises
+	
 	image = cv2.imread(imagePath)
-	image = imutils.resize(image, height=600)
+
+	image = imutils.resize(image, height=1500)
+	cv2.imshow("Rotated (Problematic)", image)
 	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-	# smooth the image using a 3x3 Gaussian, then apply the blackhat
-	# morphological operator to find dark regions on a light background
+	# 'Suavizado' de la imágen utilizand Gaussian, luego aplicamos blackhat morphological operation 
+	# blackhat morphological operation permite encontrar regiones oscuras en un fondo claro (texto MRZ)
 	gray = cv2.GaussianBlur(gray, (3, 3), 0)
 	blackhat = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, rectKernel)
 
-	# compute the Scharr gradient of the blackhat image and scale the
-	# result into the range [0, 255]
+	# Utilizamos el operador Scharr para encontrar regiones de la imagen 
+    # que no solo son oscuras sobre un fondo claro, sino que también contienen 
+    # cambios verticales en el degradado, como la región de texto MRZ.
 	gradX = cv2.Sobel(blackhat, ddepth=cv2.CV_32F, dx=1, dy=0, ksize=-1)
 	gradX = np.absolute(gradX)
+    #Luego tomamos esta imagen de degradado y la escalamos nuevamente dentro del rango [0, 255] 
 	(minVal, maxVal) = (np.min(gradX), np.max(gradX))
 	gradX = (255 * ((gradX - minVal) / (maxVal - minVal))).astype("uint8")
 
-	# apply a closing operation using the rectangular kernel to close
-	# gaps in between letters -- then apply Otsu's thresholding method
+	# Aplicamos closing operation utilizando el rectángulo kernel
 	gradX = cv2.morphologyEx(gradX, cv2.MORPH_CLOSE, rectKernel)
 	thresh = cv2.threshold(gradX, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
-	# perform another closing operation, this time using the square
-	# kernel to close gaps between lines of the MRZ, then perform a
-	# serieso of erosions to break apart connected components
+	# Eliminamos los espacios entre las líneas detectadas. Utilizamos el sqKernel que se encarga de eliminar
+    # los espacios entre las líneas del MRZ.
 	thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, sqKernel)
 	thresh = cv2.erode(thresh, None, iterations=4)
 
-	# during thresholding, it's possible that border pixels were
-	# included in the thresholding, so let's set 5% of the left and
-	# right borders to zero
+	#Cuando hacemos la umbralización (https://www.lpi.tel.uva.es/~nacho/docencia/ing_ond_1/trabajos_03_04/sonificacion/cabroa_archivos/umbralizacion.html)
+    #eliminamos la posibilidad de que los bordes se puedan agregar en forma erronea 
+    #al MRZ. Para esto seteamos los bordes 5% a la derecha y lo mismo a la izquierda.
 	p = int(image.shape[1] * 0.05)
 	thresh[:, 0:p] = 0
 	thresh[:, image.shape[1] - p:] = 0
 
-	# find contours in the thresholded image and sort them by their
-	# size
+	# Identificamos los rectangulos que se encontraron en la umbralización
+    # y los ordenamos por tamaño
 	cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
 		cv2.CHAIN_APPROX_SIMPLE)[-2]
 	cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
-
-	# loop over the contours
+	# Iteramos sobre los contornos
 	for c in cnts:
-		# compute the bounding box of the contour and use the contour to
-		# compute the aspect ratio and coverage ratio of the bounding box
-		# width to the width of the image
+		# Seteamos el cuadro delimitador del campo y usamos el contador
+		# para computar la relación de aspecto y el radio de cobertura del cuadro delimitador
+		# La relación de aspecto (aspect ratio) es el ancho de la caja delimitadora dividida por la altura
+        # El radio de cobertura es el ancho del cuadro delimitador, dividido por el nacho de la imágen actual
 		(x, y, w, h) = cv2.boundingRect(c)
 		ar = w / float(h)
 		crWidth = w / float(gray.shape[1])
 
-		# check to see if the aspect ratio and coverage width are within
-		# acceptable criteria
-		if ar > 5 and crWidth > 0.75:
-			# pad the bounding box since we applied erosions and now need
-			# to re-grow it
+		# verificamos si el aspect ratio y el radio de cobertura para
+		# determinar si estamos analizando la región MRZ
+		if ar > 5 and crWidth > 0.75: #La región MRZ debe acparar al menos el 75% de la imágen de entrada
+		
 			pX = int((x + w) * 0.03)
 			pY = int((y + h) * 0.03)
 			(x, y) = (x - pX, y - pY)
 			(w, h) = (w + (pX * 2), h + (pY * 2))
 
-			# extract the ROI from the image and draw a bounding box
-			# surrounding the MRZ
+			# Extraemos el ROI de la imágen y dibujamos un cuadro delimitador al rededor del MRZ
 			roi = image[y:y + h, x:x + w].copy()
 			cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
 			break
 
-	# show the output images
+	# Imprimimos resultados
 	cv2.imshow("Image", image)
 	cv2.imshow("ROI", roi)
+	
+	result = pytesseract.image_to_string(Image.fromarray(roi))
+	mrz_string = result.replace("URYOOOOO","URY00000")
+	print(mrz_string, '\n')
 	cv2.waitKey(0)
