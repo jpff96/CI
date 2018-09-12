@@ -1,11 +1,14 @@
 body{
     height: 100%;
     width: 100%;
-    background: rgb(47, 47, 177);
+
 }
 #home_container{
     height: 100%;
     width: 100%;
+    display: block;
+    position: absolute;
+    background: rgb(47, 47, 177);
 }
 #logo{
     position: absolute;
@@ -43,7 +46,9 @@ body{
 #info_container{
     height: 100%;
     width: 100%;
-    display: none
+    display: none;
+    position: absolute;
+    background: rgb(47, 47, 177);
 }
 
 #text_info{
@@ -80,4 +85,86 @@ body{
 }
 #next{
     float: right
+}
+#camera_container{
+    position: absolute;
+    background: rgb(47, 47, 177);
+    height: 100%;
+    width: 100%;
+    display: none;
+}
+#camera{
+    position: absolute;
+    top: 33%;
+    left: 35%;
+}
+#text_camera{
+    position: absolute;
+    width: 84%;
+    height: 7%;
+    left: 10%;
+    top: 2%;
+    text-align: center;
+    font-size: 140%;
+    color: white;
+    font-family: Verdana, Geneva, Tahoma, sans-serif
+}
+
+#success_container{
+    height: 100%;
+    width: 100%;
+    display: none;
+    position: absolute;
+    background: rgb(29, 131, 29);
+}
+
+#text_success{
+    position: absolute;
+    width: 84%;
+    height: 7%;
+    left: 10%;
+    top: 50%;
+    text-align: center;
+    font-size: 140%;
+    color: white;
+    font-family: Verdana, Geneva, Tahoma, sans-serif
+}
+
+#text_success_thanks{
+    position: absolute;
+    width: 84%;
+    height: 7%;
+    left: 10%;
+    top: 80%;
+    text-align: center;
+    font-size: 90%;
+    color: white;
+    font-family: Verdana, Geneva, Tahoma, sans-serif
+}
+
+#failure_container{
+    height: 100%;
+    width: 100%;
+    display: none;
+    position: absolute;
+    background: rgb(139, 29, 29);
+}
+#text_failure{
+    position: absolute;
+    width: 84%;
+    height: 7%;
+    left: 10%;
+    top: 50%;
+    text-align: center;
+    font-size: 140%;
+    color: white;
+    font-family: Verdana, Geneva, Tahoma, sans-serif
+}
+
+#btn_failure{
+    position: absolute;
+    width: 16%;
+    height: 7%;
+    left: 42%;
+    top: 62%;
 }
